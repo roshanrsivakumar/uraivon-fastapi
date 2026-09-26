@@ -25,7 +25,7 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
 def ask_ollama(prompt: str) -> dict:
     try:
         payload = {
-            "model": "qwen2.5:3b", # Or llama3
+            "model": "qwen2.5:3b",
             "prompt": prompt,
             "format": "json",
             "stream": False,
@@ -36,11 +36,9 @@ def ask_ollama(prompt: str) -> dict:
         response.raise_for_status()
         
         result_text = response.json().get("response", "{}")
-        # Ensure it's valid JSON
         return json.loads(result_text)
     except Exception as e:
         print(f"Ollama Error: {e}")
-        # Fallback to stub if Ollama is unreachable (e.g. deployed on Render without a remote URL)
         return None
 
 @router.post("/analyze/contract")
@@ -48,9 +46,9 @@ async def analyze_contract(
     text: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None)
 ):
-    \"\"\"
+    """
     Ingests either raw text or a PDF file, parses it, and runs Jurimetric Risk Analysis via local LLM.
-    \"\"\"
+    """
     content = ""
     
     if file:
@@ -61,7 +59,7 @@ async def analyze_contract(
     else:
         raise HTTPException(status_code=400, detail="Must provide either text or a PDF file.")
 
-    prompt = f\"\"\"You are Uraivon, an elite Enterprise Jurimetric AI.
+    prompt = f"""You are Uraivon, an elite Enterprise Jurimetric AI.
 Analyze the following commercial contract. Identify the insolvency probability (0-100), the projected bleed value (in INR formatting, e.g. '₹ 4,20,00,000' or '₹ 50,00,000' based on the risks found), and a list of statutory violations based on Indian law (like Indian Contract Act).
 
 Output strictly in this JSON schema:
@@ -80,7 +78,7 @@ Output strictly in this JSON schema:
 
 Contract Text:
 {content}
-\"\"\"
+"""
     
     ai_result = ask_ollama(prompt)
     
