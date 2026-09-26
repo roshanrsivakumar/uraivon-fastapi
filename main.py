@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.analyze import router as analyze_router
 from api.exam import router as exam_router
+from api.story import router as story_router
 
 app = FastAPI(
     title="Uraivon Jurimetrics Engine API",
@@ -9,7 +10,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Allow requests from the Next.js frontend
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -24,3 +24,4 @@ def health_check():
 
 app.include_router(analyze_router, prefix="/api/v1")
 app.include_router(exam_router, prefix="/api/v1")
+app.include_router(story_router, prefix="/api/v1")
