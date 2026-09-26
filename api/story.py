@@ -7,6 +7,7 @@ from typing import Optional
 
 router = APIRouter()
 
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 OLLAMA_API_URL = os.environ.get("OLLAMA_API_URL", "http://localhost:11434/api/generate")
 
 class StoryRequest(BaseModel):
@@ -16,20 +17,34 @@ class StoryRequest(BaseModel):
     villain: Optional[str] = "The Villain"
     base_narrative: Optional[str] = ""
 
-def ask_ollama(prompt: str) -> str:
-    try:
-        payload = {
-            "model": "qwen2.5:3b",
-            "prompt": prompt,
-            "stream": False,
-            "temperature": 0.4
-        }
-        response = requests.post(OLLAMA_API_URL, json=payload, timeout=120)
-        response.raise_for_status()
-        return response.json().get("response", "")
-    except Exception as e:
-        print(f"Ollama Error: {e}")
-        return None
+def ask_ai(prompt: str) -> str:
+    if GEMINI_API_KEY:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.4}
+            }
+            response = requests.post(url, json=payload, timeout=60)
+            response.raise_for_status()
+            return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception as e:
+            print(f"Gemini Error: {e}")
+            return None
+    else:
+        try:
+            payload = {
+                "model": "qwen2.5:3b",
+                "prompt": prompt,
+                "stream": False,
+                "temperature": 0.4
+            }
+            response = requests.post(OLLAMA_API_URL, json=payload, timeout=120)
+            response.raise_for_status()
+            return response.json().get("response", "")
+        except Exception as e:
+            print(f"Ollama Error: {e}")
+            return None
 
 @router.post("/story/generate")
 async def generate_story(req: StoryRequest):
@@ -54,12 +69,12 @@ Your story must:
 
 Output only the story text."""
     
-    ai_result = ask_ollama(prompt)
+    ai_result = ask_ai(prompt)
     
     if ai_result:
         return {"status": "success", "story": ai_result}
     
     return {
         "status": "fallback", 
-        "story": f"Unable to reach the Local Jurimetric LLM engine. Please ensure Ollama is running.\n\n[Fallback Story]\n{req.villain} attempted to violate the principles of {req.concept}, but {req.hero2} intervened using the landmark Indian Supreme Court precedent to save {req.hero1}. (Note: Start Ollama to generate exact BNS and IPC section mappings)."
+        "story": f"Unable to reach the Jurimetric Engine. Please ensure GEMINI_API_KEY is configured in Render.\n\n[Fallback Story]\n{req.villain} attempted to violate the principles of {req.concept}, but {req.hero2} intervened using the landmark Indian Supreme Court precedent to save {req.hero1}. (Note: Configure a Gemini API Key on Render to generate exact BNS and IPC section mappings)."
     }

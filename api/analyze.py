@@ -8,6 +8,7 @@ from io import BytesIO
 
 router = APIRouter()
 
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 OLLAMA_API_URL = os.environ.get("OLLAMA_API_URL", "http://localhost:11434/api/generate")
 
 def extract_text_from_pdf(file_bytes: bytes) -> str:
@@ -22,24 +23,38 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to parse PDF: {str(e)}")
 
-def ask_ollama(prompt: str) -> dict:
-    try:
-        payload = {
-            "model": "qwen2.5:3b",
-            "prompt": prompt,
-            "format": "json",
-            "stream": False,
-            "temperature": 0.1
-        }
-        
-        response = requests.post(OLLAMA_API_URL, json=payload, timeout=60)
-        response.raise_for_status()
-        
-        result_text = response.json().get("response", "{}")
-        return json.loads(result_text)
-    except Exception as e:
-        print(f"Ollama Error: {e}")
-        return None
+def ask_ai(prompt: str) -> dict:
+    import json
+    if GEMINI_API_KEY:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"temperature": 0.1, "response_mime_type": "application/json"}
+            }
+            response = requests.post(url, json=payload, timeout=60)
+            response.raise_for_status()
+            result_text = response.json()["candidates"][0]["content"]["parts"][0]["text"]
+            return json.loads(result_text)
+        except Exception as e:
+            print(f"Gemini Error: {e}")
+            return None
+    else:
+        try:
+            payload = {
+                "model": "qwen2.5:3b",
+                "prompt": prompt,
+                "format": "json",
+                "stream": False,
+                "temperature": 0.1
+            }
+            response = requests.post(OLLAMA_API_URL, json=payload, timeout=60)
+            response.raise_for_status()
+            result_text = response.json().get("response", "{}")
+            return json.loads(result_text)
+        except Exception as e:
+            print(f"Ollama Error: {e}")
+            return None
 
 @router.post("/analyze/contract")
 async def analyze_contract(
@@ -80,7 +95,7 @@ Contract Text:
 {content}
 """
     
-    ai_result = ask_ollama(prompt)
+    ai_result = ask_ai(prompt)
     
     if ai_result and "insolvency_probability" in ai_result:
         return ai_result
