@@ -24,12 +24,22 @@ async def analyze_contract(
     # STUB: Send content to local Llama-3 model for risk extraction
     # response = local_llm.analyze(content)
     
+
     return {
         "status": "success",
-        "risk_score": 8.4,
-        "critical_threats": [
-            "Uncapped Indemnification identified in Section 4.",
-            "Asymmetrical Termination Rights identified in Section 9."
-        ],
-        "raw_content_preview": content[:100] + "..." if len(content) > 100 else content
+        "insolvency_probability": 84,
+        "projected_bleed_value": "₹ 4,20,00,000",
+        "statutory_violations": [
+            {
+                "violation_type": "Uncapped Indemnification",
+                "statute": "Section 73, Indian Contract Act",
+                "risk_description": "Indemnity clause lacks financial cap, exposing enterprise to infinite liability."
+            },
+            {
+                "violation_type": "Asymmetrical Termination",
+                "statute": "Section 39, Indian Contract Act",
+                "risk_description": "Supplier cannot terminate, while Buyer can terminate for convenience in 3 days."
+            }
+        ]
     }
+
